@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ImportProduct": {
+      "commandName": "Project",
+      "commandLineArgs": "capterra feed-products/capterra.yaml"
+    }
+  }
+}

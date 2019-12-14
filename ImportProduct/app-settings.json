@@ -1,0 +1,6 @@
+{
+  "Configuration": {
+    "ConsoleTitle": "Import Products",
+    "DbServiceProvider": "SqlDb"
+  }
+}
