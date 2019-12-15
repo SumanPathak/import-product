@@ -1,22 +1,22 @@
-﻿using System;
-using System.IO;
-using ImportProduct.Models;
+﻿using ImportProduct.Models;
+using ImportProduct.Services.Implementation;
+using ImportProduct.Services.Interface;
+using ImportProductDAL;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ImportProductDAL;
-using ImportProduct.Services.Interface;
-using ImportProduct.Services.Implementation;
+using System;
+using System.IO;
 
 namespace ImportProduct
 {
-    class Program
+    public class Program
     {
         static void Main(string[] args)
         {
             // create service collection
             var serviceCollection = new ServiceCollection();
-            ConfigureServices(serviceCollection);
+            ConfigureServices(serviceCollection, args);
 
             // create service provider
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -25,7 +25,7 @@ namespace ImportProduct
             serviceProvider.GetService<App>().Run();
         }
 
-        private static void ConfigureServices(IServiceCollection serviceCollection)
+        public static void ConfigureServices(IServiceCollection serviceCollection, string[] args)
         {
             serviceCollection.AddLogging(loggingBuilder =>
             {
@@ -37,15 +37,19 @@ namespace ImportProduct
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("app-settings.json", false)
-                .Build();
+                .AddCommandLine(args)
+                .Build();       
 
             serviceCollection.AddOptions();
-            serviceCollection.Configure<AppSettings>(configuration.GetSection("Configuration"));
+            serviceCollection.Configure<AppSettings>(configuration.GetSection("Configuration"))
+                .Configure<AppSettings>(x=>x.ProductProvider = GetServiceProvider(args).ToString())
+                .Configure<AppSettings>(x=>x.ProductFilePath = GetFilePath(args));
+
             ConfigureConsole(configuration);
 
             // add services
 
-            switch (GetServiceProvider())
+            switch (GetServiceProvider(args))
             {
                 case ProductServiceProvider.capterra:
                     serviceCollection.AddTransient<IProductService, CapterraService>();
@@ -69,9 +73,27 @@ namespace ImportProduct
             System.Console.Title = configuration.GetSection("Configuration:ConsoleTitle").Value;
         }
 
-        private static ProductServiceProvider GetServiceProvider()
+        private static ProductServiceProvider GetServiceProvider(string[] args)
         {
-            return (ProductServiceProvider)Enum.Parse(typeof(ProductServiceProvider), Environment.GetCommandLineArgs()[1].ToLower());
+            try
+            {
+                return (ProductServiceProvider)Enum.Parse(typeof(ProductServiceProvider), args[0].ToLower());
+            }
+            catch
+            {
+                return ProductServiceProvider.unknown;
+            }
+        }
+        private static string GetFilePath(string[] args)
+        {
+            try
+            {
+                return args[1];
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
     }
 }
